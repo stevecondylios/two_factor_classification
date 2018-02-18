@@ -39,20 +39,22 @@ train <- as.matrix(tdm_fresh)
 train <- as.data.frame(train)
 names(train) <- make.names(names(train)); gc()
 
-a <- predict(fit, newdata = train)
+ML_one_if_rel <- predict(fit, newdata = train)
 
 # Check accuracy - 95% accurate (small improvement to 95.33% when removing "chrome"):
 
-all_cats_fresh <- cbind(all_cats_fresh, a)
-all_cats_fresh[all_cats_fresh$one_if_rel == all_cats_fresh$a, ] %>% nrow(.) / nrow(all_cats_fresh)
+all_cats_fresh <- cbind(all_cats_fresh, ML_one_if_rel)
+all_cats_fresh[all_cats_fresh$one_if_rel == all_cats_fresh$ML_one_if_rel, ] %>% nrow(.) / nrow(all_cats_fresh)
 
 # how many new possibly relevant products? 800. After feature-engineering out "chrome" ML identifies 389 relevant products outside of obvious categories
 # This is far fewer than the ~800 it initially identified, but it is now far more accurate
-all_cats_fresh[all_cats_fresh$one_if_rel == 0 & all_cats_fresh$a == 1,] %>% nrow()
+all_cats_fresh[all_cats_fresh$one_if_rel == 0 & all_cats_fresh$ML_one_if_rel == 1,] %>% nrow()
 
 
 all_cats_fresh[all_cats_fresh$one_if_rel ==1, ] %>% nrow() #10841
-all_cats_fresh$one_if_rel <- ifelse((all_cats_fresh$one_if_rel == 1 & !is.na(all_cats_fresh$one_if_rel)) | (all_cats_fresh$a == 1 & !is.na(all_cats_fresh$a)), 1, 0)
+all_cats_fresh$one_if_rel <- ifelse((all_cats_fresh$one_if_rel == 1 & !is.na(all_cats_fresh$one_if_rel)) | (all_cats_fresh$ML_one_if_rel == 1 & !is.na(all_cats_fresh$ML_one_if_rel)), 1, 0)
 # 10841 identified as relevant by category, 389 extras from ML, 11230 total
 
+setwd("Fresh labels for matching app")
+write.csv(all_cats_fresh, "all_cats_fresh.csv", row.names = FALSE)
 
