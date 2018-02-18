@@ -25,8 +25,7 @@ library(dplyr)
 Sys.setenv(TZ="Australia/Sydney")
 tryCatch(setwd("C:/Users/Administrator"), error=function(e) {})
 
-
-all_cats <- read.csv("C:/Users/Steve Condylios/Documents/scraping_bunnings/all_cats_clean_for_ML_20180105.csv", header=TRUE)
+all_cats <- read.csv("C:/Users/Steve Condylios/Documents/Amazon/Training ML model for bunnings product two factor classification/all_cats_clean_for_ML_20180105.csv", header=TRUE)
 
 # Inspect
 rel <- all_cats[all_cats$one_if_rel == 1,] 
@@ -60,6 +59,11 @@ train$one_if_rel <- as.factor(train$one_if_rel)
 
 # Idea from web
 names(train) <- make.names(names(train)); gc()
+
+# Feature Engineering
+
+# Remove "chrome" as it results in a LOT of false positives
+train$chrome <- NULL
 
 
 # Train model:
@@ -102,12 +106,13 @@ names(train) <- make.names(names(train)); gc()
 
 a <- predict(fit, newdata = train)
 
-# Check accuracy - 95% accurate: 
+# Check accuracy - 95% accurate (small improvement to 95.33% when removing "chrome"):
 
 all_cats <- cbind(all_cats, a)
 all_cats[all_cats$one_if_rel == all_cats$a, ] %>% nrow(.) / nrow(all_cats)
 
-# how many new possibly relevant products? 800
+# how many new possibly relevant products? 800. After feature-engineering out "chrome" ML identifies 426 relevant products outside of obvious categories
+# This is far fewer than the ~800 it initially identified, but it is now far more accurate
 all_cats[all_cats$one_if_rel == 0 & all_cats$a == 1,] %>% nrow()
 
 
@@ -120,6 +125,7 @@ colnames(all_cats)[4] <- "ML_one_if_rel"
 # all_cats <- all_cats[!duplicated(all_cats), ]
 
 
+# setwd("C:/Users/Steve Condylios/Documents/Amazon/Training ML model for bunnings product two factor classification//Feature Engineering")
 saveRDS(all_cats, "bunnings_pre_labelled.rds")
 saveRDS(tdm, "tdm.rds") # original tdm necessary to use in Terms(tdm) in creating any new tdm - may be a more efficient way of storing this info (for this ML model it's around half a gig)
 saveRDS(fit, "bunnings_text_classification_fit.rds")
