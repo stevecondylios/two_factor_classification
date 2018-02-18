@@ -64,12 +64,12 @@ names(train) <- make.names(names(train)); gc()
 
 # Train model:
 
-# cl <- makeCluster(detectCores()-1)
-# registerDoParallel(cl)
+ cl <- makeCluster(detectCores()-1)
+ registerDoParallel(cl)
 fit <- train(one_if_rel ~ ., data = train, method = 'LogitBoost'
              ,model = FALSE # Added to try to reduce the function holding raw data and models. See: https://stackoverflow.com/questions/6543999/why-is-caret-train-taking-up-so-much-memory
 )
-# stopCluster(cl)
+ stopCluster(cl)
 
 
 # Check accuracy on training. # Note: when predicting for test or other new datasets, only keep the columns that are contained in the fit (i.e. fit[[11]][3][[1]])
