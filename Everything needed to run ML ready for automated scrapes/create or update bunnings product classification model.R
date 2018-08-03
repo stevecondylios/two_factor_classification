@@ -11,9 +11,6 @@
 # The 'Train the model' section will run in parallel (so it might be wise to limit usage of other things on your PC/Mac while it runs) - that part takes ~20 mins, the rest only a few mins
 # The script will produce 3 output files, which can be cut/paste directly into the competitor-pricing directory (they'll be used by the scrape)
 
-#----- Tips -----#
-# Use cluster whereever possible as it improves times (i.e. on tdm's and trains, no need on predict)
-
 library(caret)
 library(tm)
 library(SnowballC)
