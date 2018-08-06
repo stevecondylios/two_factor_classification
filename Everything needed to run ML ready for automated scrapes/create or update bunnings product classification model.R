@@ -17,9 +17,15 @@ library(SnowballC)
 library(arm)
 library(doParallel)
 library(dplyr)
+library(stringr)
+library(stringi)
 Sys.setenv(TZ="Australia/Sydney")
 
-all_cats <- read.csv("bunnings_training_data.csv", header=TRUE, stringsAsFactors = FALSE)
+
+
+##### MODEL WILL BE TRAINED ON THE DATASET ENTERED HERE (THE PRODUCTS TO BE 'PRE-LABELLED' ARE READ IN FURTHER DOWN IN THIS SCRIPT) #####
+##### YOU MAY USE THE SAME DATASET FOR BOTH, OR USE A MORE UP TO DATE DATASET (AND NOT RE-TRAIN THE ML MODEL) IF YOU LIKE (the benefit is that it saves the ~20 minutes training time)
+all_cats <- read.csv("bunnings_training_data.csv", header=TRUE, stringsAsFactors = FALSE, colClasses = c("in_number"="character"))
 all_cats$product <- enc2utf8(all_cats$product)
 
 rel <- all_cats[all_cats$one_if_rel == 1, ] 
@@ -34,11 +40,29 @@ irrel_5k <- irrel[sample(nrow(irrel), 5000), ]
 all_cats.training <- rbind(rel_5k, irrel_5k)
 
 # Training data.
-data <- all_cats.training$product
+data <- all_cats.training$product %>% str_replace_all(. ,"[^[:graph:]]", " ") # %>% stringi::stri_trans_general(., "latin-ascii")
+
+data <- iconv(data, 'utf-8', 'ascii', sub='') # This looks like it got rid of \u003D-like characters
+# data %>% grepl("cut", .) %>% data[.] %>% write.csv(., "file.csv")
+
+
 corpus <- VCorpus(VectorSource(data))
+
+# Way to convert u\ unicode to ascii: https://stackoverflow.com/questions/17761858/converting-a-u-escaped-unicode-string-to-ascii
+# 'pretty\\u003D\\u003Ebig' %>% parse(text = paste0("'", ., "'")) %>% as.character() # Works
+# 'cut\\u1D40\\u1D39' %>% parse(text = paste0("'", ., "'")) %>% as.character() # Doesn't work
+
+# Here we may experience some time-consuming errors regarding stubborn special characters. 
+# Through some research + trial and error, it appears using 1. on the raw vector of text documents (in this case products), 
+# then 2. on the colnames()/Terms() of the tdm, we can overcome the problems
+# 1. str_replace_all(. ,"[^[:graph:]]", " ") %>% stringi::stri_trans_general(., "latin-ascii")
+# 2. from here: https://stackoverflow.com/questions/17879211/i-would-like-to-use-gsub-in-r-to-match-all-items-which-are-not-alphanumeric
 
 # Create a document term matrix.
 tdm <- DocumentTermMatrix(corpus, list(removePunctuation = TRUE, stopwords = TRUE, stemming = TRUE, removeNumbers = TRUE))
+
+# Terms(tdm) %>% grepl("cut", .) %>% Terms(tdm)[.]
+
 
 # Convert to a data.frame for training and assign a classification (factor) to each document.
 train <- as.matrix(tdm)
@@ -85,9 +109,9 @@ comparison[comparison$one_if_rel == comparison$predictions_on_training_set, ] %>
 ##############################################################
 
 # Note: You can use the existing model on new data if desired, simply read in a different day's bunnings scrape below
-all_cats_new_data <- read.csv("bunnings_training_data.csv", header=TRUE, stringsAsFactors = FALSE)
+all_cats_new_data <- read.csv("bunnings_training_data.csv", header=TRUE, stringsAsFactors = FALSE, colClasses = c("in_number"="character"))
 
-new_data <- all_cats_new_data$product %>% enc2utf8()
+new_data <- all_cats_new_data$product # %>% enc2utf8() This conversion may have been contributing to some errors due to odd column headings (Terms(tdm))
 
 corpus_new_data <- VCorpus(VectorSource(new_data))
 
@@ -120,6 +144,8 @@ all_cats_new_data$ML_one_if_rel <- as.numeric(as.character(all_cats_new_data$ML_
 saveRDS(all_cats_new_data, "bunnings_pre_labelled.rds")
 saveRDS(tdm, "tdm.rds") # original tdm necessary to use in Terms(tdm) in creating any new tdm - may be a more efficient way of storing this info (for this ML model it's around half a gig)
 saveRDS(fit, "bunnings_text_classification_fit.rds")
+
+
 
 
 
